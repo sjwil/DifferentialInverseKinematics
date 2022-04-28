@@ -19,7 +19,6 @@ alph = np.array([math.pi/2, 0, 0, math.pi/2, -math.pi/2, 0])
 
 # Forward Transforms
 def AH(n, th):
-
     T_a = np.array(np.identity(4), copy=False)
     T_a[0, 3] = a[n - 1]
     T_d = np.array(np.identity(4), copy=False)

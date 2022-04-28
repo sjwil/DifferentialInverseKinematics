@@ -1,5 +1,6 @@
 import numpy as np
-from spatialmath import SE3, trnorm
+from spatialmath import SE3
+from spatialmath.base import trnorm
 
 def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
     """
@@ -21,7 +22,7 @@ def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="
         return SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
         
     next_angles = current_angles
-    current_pose = transform_fn(np.array([theta for theta in next_angles]))
+    current_pose = transform_fn(current_angles)
     previous_pose = np.identity(4)
     delta = np.inf
     intermediate_joint_positions = []
@@ -50,7 +51,7 @@ def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="
         intermediate_joint_positions += [next_angles]
 
         previous_pose = current_pose
-        current_pose = transform_fn(np.array([theta for theta in next_angles]))
+        current_pose = transform_fn(next_angles)
         delta = np.linalg.norm(current_pose - previous_pose)
 
     return intermediate_joint_positions
