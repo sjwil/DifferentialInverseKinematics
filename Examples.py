@@ -1,8 +1,8 @@
-from DifferentialIK import moveJacobian
+from DifferentialIK import differential_ik
 from UR5e import HTrans, Jacobian
 import numpy as np
 
-def task_one(modes=None, trials=None):
+def task_one(modes=None, trials=None, max_delta=0.032):
     if trials == None:
         trials = [10, 20, 30, 40, 50]
     if modes == None:
@@ -16,7 +16,8 @@ def task_one(modes=None, trials=None):
     center_pose[2, 3] -= dz
 
     def generate_waypoints(start, dz, dy, n=50):
-        times = np.linspace(0, 2 * np.pi, num=n, endpoint=True)
+        # Have the first step not equal the start
+        times = np.linspace(0, 2 * np.pi, num=n + 1, endpoint=True)[1:]
         return np.array([start + np.array([0, dy * np.sin(t), dz * np.cos(t)]) for t in times])
 
     iterations = np.zeros((len(trials), len(modes)))
@@ -28,9 +29,10 @@ def task_one(modes=None, trials=None):
             for waypoint in generate_waypoints(center_pose[0:3, 3], dz, dy, n=n):
                 next_point = center_pose.copy()
                 next_point[0:3, 3] = waypoint
-                current_run_joint_positions = moveJacobian(test_angles, next_point, HTrans, Jacobian, mode=mode)
+                current_run_joint_positions = differential_ik(test_angles, next_point, HTrans, Jacobian, mode=mode)
                 intermediate_joint_positions += current_run_joint_positions
-                test_angles = intermediate_joint_positions[-1]
+                # if len(current_run_joint_positions) > 0:
+                test_angles = current_run_joint_positions[-1]
             iterations[i, j] = len(intermediate_joint_positions)
             full_run_joint_positions += intermediate_joint_positions
     return full_run_joint_positions, iterations

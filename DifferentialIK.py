@@ -2,9 +2,9 @@ import numpy as np
 from spatialmath import SE3
 from spatialmath.base import trnorm
 
-def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
+def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
     """
-    moveJacobian returns a list of joint angle waypoints to bring the end effector from the current position to the desired_pose along
+    differential_ik returns a list of joint angle waypoints to bring the end effector from the current position to the desired_pose along
     the shortest path. 
 
     @param current_angles: list of joint angles that specify the current configuration
@@ -19,12 +19,17 @@ def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="
 
     def get_desired_twist(current, desired):
         # Space twist from current and desired transform
-        return SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
+        s = SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
+        # Above will fail when the rotation matrix is the identity. Resolve manually. 
+        if np.isnan(s).any():
+            s[0:3] = desired[0:3, 3] - current[0:3, 3]
+            s[3:6] = 0
+        return s
         
     next_angles = current_angles
     current_pose = transform_fn(current_angles)
     previous_pose = np.identity(4)
-    delta = np.inf
+    delta = np.linalg.norm(current_pose - desired_pose)
     intermediate_joint_positions = []
     
     while delta > tol:
@@ -43,6 +48,9 @@ def moveJacobian(current_angles, desired_pose, transform_fn, jacobian_fn, mode="
             jjte = j @ j.T @ step_twist
             alpha = np.dot(step_twist, jjte) / np.dot(jjte, jjte)
             dtheta = alpha * j.T @ step_twist 
+        else:
+            print("Invalid mode!")
+            return
 
         # Multiplicatively scale dtheta so max(dtheta) = max_delta 
         delta = max_delta / max(max_delta, np.max(np.abs(dtheta)))
