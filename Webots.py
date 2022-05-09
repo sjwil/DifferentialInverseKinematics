@@ -27,7 +27,7 @@ for _ in range(200):
     robot.step(timestep)
 
 # Each position is one timestep away
-positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["DLS"], trials=[50], max_delta=timestep / 1000 * speed)
+positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["Transpose", "Pseudoinverse", "DLS"], trials=[50], max_delta=timestep / 1000 * speed)
 
 '''
 i = 0
