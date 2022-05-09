@@ -31,10 +31,14 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mod
     previous_pose = np.identity(4)
     delta = np.linalg.norm(current_pose - desired_pose)
     intermediate_joint_positions = []
+    intermediate_end_effector_positions = []
+    desired_twists = []
+    actual_twists = []
     
     while delta > tol:
         current_angles = next_angles
         step_twist = get_desired_twist(current_pose, desired_pose)
+        desired_twists += [step_twist]
         j = jacobian_fn(current_angles)
 
         # Pseudoinverse
@@ -60,6 +64,9 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mod
 
         previous_pose = current_pose
         current_pose = transform_fn(next_angles)
+        actual_twists += [SE3(trnorm(current_pose @ SE3(previous_pose).inv().A)).log(twist = True)]
+        intermediate_end_effector_positions += [current_pose[0:3, 3]]
+
         delta = np.linalg.norm(current_pose - previous_pose)
 
-    return intermediate_joint_positions
+    return intermediate_joint_positions, intermediate_end_effector_positions, desired_twists, actual_twists

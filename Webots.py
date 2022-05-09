@@ -27,14 +27,15 @@ for _ in range(200):
     robot.step(timestep)
 
 # Each position is one timestep away
-positions = task_one(modes=["Pseudoinverse", "DLS"], trials=[50], max_delta=timestep / 1000 * speed)
-i = 0
+positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["DLS"], trials=[50], max_delta=timestep / 1000 * speed)
 
+'''
+i = 0
 while robot.step(timestep) != -1:
-    position = positions[0][i]
+    position = positions[i]
     [motor.setPosition(angle) for motor, angle in zip(joint_motors, position)]
 
     i += 1
-    if i == len(positions[0]):
+    if i == len(positions):
         break
-
+'''
