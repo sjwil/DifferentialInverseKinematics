@@ -2,6 +2,12 @@ from DifferentialIK import differential_ik
 from UR5e import HTrans, Jacobian
 import numpy as np
 
+def generate_waypoints(start, dz, dy, n=50):
+    # Have the first step not equal the start
+    times = np.linspace(0, 2 * np.pi, num=n + 1, endpoint=True)[1:]
+    return np.array([start + np.array([0, dy * np.sin(t), dz * np.cos(t)]) for t in times])
+
+
 def task_one(modes=None, trials=None, max_delta=0.032):
     if trials == None:
         trials = [10, 20, 30, 40, 50]
@@ -14,11 +20,6 @@ def task_one(modes=None, trials=None, max_delta=0.032):
     dz = 0.2
     dy = 0.6
     center_pose[2, 3] -= dz
-
-    def generate_waypoints(start, dz, dy, n=50):
-        # Have the first step not equal the start
-        times = np.linspace(0, 2 * np.pi, num=n + 1, endpoint=True)[1:]
-        return np.array([start + np.array([0, dy * np.sin(t), dz * np.cos(t)]) for t in times])
 
     iterations = np.zeros((len(trials), len(modes)))
     full_run_joint_positions = []

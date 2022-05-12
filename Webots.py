@@ -1,6 +1,7 @@
 # Example using a simulated UR5e in webots
-from Examples import task_one
+from Examples import task_one, generate_waypoints
 from controller import Robot
+from UR5e import HTrans
 
 # create the Robot instance.
 robot = Robot()
@@ -28,6 +29,17 @@ for _ in range(200):
 
 # Each position is one timestep away
 positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["Transpose", "Pseudoinverse", "DLS"], trials=[50], max_delta=timestep / 1000 * speed)
+
+
+# Get the waypoints
+test_angles = [0, -1.382, -1.13, -2, 1.63, 3.142]
+center_pose = HTrans(test_angles)
+
+dz = 0.2
+dy = 0.6
+center_pose[2, 3] -= dz
+
+waypoints = generate_waypoints(center_pose[0:3, 3], dz, dy, n=50)
 
 '''
 i = 0
