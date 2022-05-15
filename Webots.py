@@ -28,7 +28,7 @@ for _ in range(200):
     robot.step(timestep)
 
 # Each position is one timestep away
-positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["Transpose", "Pseudoinverse", "DLS"], trials=[50], max_delta=timestep / 1000 * speed)
+positions, iterations, end_effector_positions, desired_twists, actual_twists = task_one(modes=["Transpose", "Pseudoinverse", "DLS"], trials=[30], max_delta=timestep / 1000 * speed)
 
 
 # Get the waypoints
@@ -39,7 +39,7 @@ dz = 0.2
 dy = 0.6
 center_pose[2, 3] -= dz
 
-waypoints = generate_waypoints(center_pose[0:3, 3], dz, dy, n=50)
+waypoints = generate_waypoints(center_pose[0:3, 3], dz, dy, n=30)
 
 '''
 i = 0
