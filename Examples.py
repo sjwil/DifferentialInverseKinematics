@@ -1,4 +1,4 @@
-from DifferentialIK import differential_ik
+from DifferentialIK import differential_ik, get_desired_twist
 from UR5e import HTrans, Jacobian
 import numpy as np
 
@@ -7,8 +7,7 @@ def generate_waypoints(start, dz, dy, n=50):
     times = np.linspace(0, 2 * np.pi, num=n + 1, endpoint=True)[1:]
     return np.array([start + np.array([0, dy * np.sin(t), dz * np.cos(t)]) for t in times])
 
-
-def task_one(modes=None, trials=None, max_delta=0.032):
+def task_one(modes=None, trials=None, jacobian_fn=Jacobian, desired_twist_fn=get_desired_twist, max_delta=0.032):
     if trials == None:
         trials = [10, 20, 30, 40, 50]
     if modes == None:
@@ -37,7 +36,7 @@ def task_one(modes=None, trials=None, max_delta=0.032):
             for waypoint in generate_waypoints(center_pose[0:3, 3], dz, dy, n=n):
                 next_point = center_pose.copy()
                 next_point[0:3, 3] = waypoint
-                current_run_joint_positions, current_run_end_effector_positions, desired_twists, actual_twists = differential_ik(test_angles, next_point, HTrans, Jacobian, mode=mode)
+                current_run_joint_positions, current_run_end_effector_positions, desired_twists, actual_twists = differential_ik(test_angles, next_point, HTrans, jacobian_fn, desired_twist_fn, mode=mode)
                 
                 intermediate_joint_positions += current_run_joint_positions
                 intermediate_run_end_effector_positions += current_run_end_effector_positions

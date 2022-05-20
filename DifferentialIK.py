@@ -2,7 +2,16 @@ import numpy as np
 from spatialmath import SE3
 from spatialmath.base import trnorm
 
-def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
+def get_desired_twist(current, desired):
+    # Space twist from current and desired transform
+    s = SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
+    # Above will fail when the rotation matrix is the identity. Resolve manually. 
+    if np.isnan(s).any():
+        s[0:3] = desired[0:3, 3] - current[0:3, 3]
+        s[3:6] = 0
+    return s
+
+def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, desired_twist_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
     """
     differential_ik returns a list of joint angle waypoints to bring the end effector from the current position to the desired_pose along
     the shortest path. 
@@ -11,20 +20,12 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mod
     @param desired_pose: 4x4 Homogeneous transform as a np.array
     @param transform_fn: Function which outputs the 4x4 Homogeneous transform of the end effector given a list of joint angles
     @param jacobian_fn: Function which computes the jacobian given a list of joint angles
+    @param desired_twist_fn: Function which computes the desired twist given the current and desired poses
     @param mode: String specifying which method to use. Options are "Pseudoinverse", "Transpose", and "DLS"
     @param tol: Tolerance to exit on convergence
     @param damping: Damping parameter for DLS
     @param max_delta: Max change in joint angles between returned waypoints. 
     """
-
-    def get_desired_twist(current, desired):
-        # Space twist from current and desired transform
-        s = SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
-        # Above will fail when the rotation matrix is the identity. Resolve manually. 
-        if np.isnan(s).any():
-            s[0:3] = desired[0:3, 3] - current[0:3, 3]
-            s[3:6] = 0
-        return s
         
     next_angles = current_angles
     current_pose = transform_fn(current_angles)
@@ -37,7 +38,7 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, mod
     
     while delta > tol:
         current_angles = next_angles
-        step_twist = get_desired_twist(current_pose, desired_pose)
+        step_twist = desired_twist_fn(current_pose, desired_pose)
         desired_twists += [step_twist]
         j = jacobian_fn(current_angles)
 
