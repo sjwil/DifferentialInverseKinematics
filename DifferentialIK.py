@@ -11,14 +11,16 @@ def get_desired_twist(current, desired):
         s[3:6] = 0
     return s
 
-def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, desired_twist_fn, mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
+def differential_ik(current_angles, desired_pose, transform_fn, 
+                    epsilon_fn, jacobian_fn, desired_twist_fn, 
+                    mode="DLS", tol=1e-3, damping=0.04, max_delta=0.032):
     """
     differential_ik returns a list of joint angle waypoints to bring the end effector from the current position to the desired_pose along
     the shortest path. 
-
     @param current_angles: list of joint angles that specify the current configuration
     @param desired_pose: 4x4 Homogeneous transform as a np.array
     @param transform_fn: Function which outputs the 4x4 Homogeneous transform of the end effector given a list of joint angles
+    @param epsilon_fn: Function that computes the epsilon to compare to a given @param tol 
     @param jacobian_fn: Function which computes the jacobian given a list of joint angles
     @param desired_twist_fn: Function which computes the desired twist given the current and desired poses
     @param mode: String specifying which method to use. Options are "Pseudoinverse", "Transpose", and "DLS"
@@ -26,20 +28,24 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, des
     @param damping: Damping parameter for DLS
     @param max_delta: Max change in joint angles between returned waypoints. 
     """
-        
-    next_angles = current_angles
+
     current_pose = transform_fn(current_angles)
-    previous_pose = np.identity(4)
-    delta = np.linalg.norm(current_pose - desired_pose)
+    epsilon = epsilon_fn(current_pose, desired_pose)
     intermediate_joint_positions = []
     intermediate_end_effector_positions = []
     desired_twists = []
     actual_twists = []
+
     
-    while delta > tol:
-        current_angles = next_angles
+    count = 0
+    while epsilon > tol:
+        count += 1
+        if count > 200:
+          print(f"break on count: {count}, eps: {epsilon}")
+          break
         step_twist = desired_twist_fn(current_pose, desired_pose)
-        desired_twists += [step_twist]
+        # import pdb; pdb.set_trace()
+        desired_twists.append(step_twist)
         j = jacobian_fn(current_angles)
 
         # Pseudoinverse
@@ -48,6 +54,10 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, des
         # Damped Least Squares
         elif mode == "DLS":
             dtheta = j.T @ np.linalg.inv(j @ j.T + damping ** 2 * np.identity(6)) @ step_twist
+        elif mode == "ScaledDLS":
+            jjt = j @ j.T
+            diag_j = np.diag(np.diag(jjt)) # call np.diag twice, first to get diagonal, second to reshape
+            dtheta = j.T @ np.linalg.pinv(jjt + damping ** 2 * diag_j) @ step_twist
         # Jacobian Transpose
         elif mode == "Transpose":
             jjte = j @ j.T @ step_twist
@@ -59,15 +69,16 @@ def differential_ik(current_angles, desired_pose, transform_fn, jacobian_fn, des
 
         # Multiplicatively scale dtheta so max(dtheta) = max_delta 
         delta = max_delta / max(max_delta, np.max(np.abs(dtheta)))
-        next_angles = [angle + delta * dth for angle, dth in zip(current_angles, dtheta)]
 
+        next_angles = [angle + delta * dth for angle, dth in zip(current_angles, dtheta)]
         intermediate_joint_positions += [next_angles]
 
         previous_pose = current_pose
-        current_pose = transform_fn(next_angles)
-        actual_twists += [SE3(trnorm(current_pose @ SE3(previous_pose).inv().A)).log(twist = True)]
-        intermediate_end_effector_positions += [current_pose[0:3, 3]]
+        current_angles = next_angles
+        current_pose = transform_fn(current_angles)
+        epsilon = epsilon_fn(current_pose, desired_pose)
 
-        delta = np.linalg.norm(current_pose - previous_pose)
+        # actual_twists.append(desired_twist_fn(previous_pose, current_pose))
+        intermediate_end_effector_positions.append(current_pose[0:3, 3])
 
     return intermediate_joint_positions, intermediate_end_effector_positions, desired_twists, actual_twists
