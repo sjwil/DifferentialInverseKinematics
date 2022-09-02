@@ -1,10 +1,22 @@
 import numpy as np
-from spatialmath import SE3
+from spatialmath import SE3, SO3
 from spatialmath.base import trnorm
 
-def get_desired_twist(current, desired):
+def sam_get_space_twist(current, desired):
     # Space twist from current and desired transform
     s = SE3(trnorm(desired @ SE3(current).inv().A)).log(twist = True)
+    # Above will fail when the rotation matrix is the identity. Resolve manually. 
+    if np.isnan(s).any():
+        s[0:3] = desired[0:3, 3] - current[0:3, 3]
+        s[3:6] = 0
+    return s
+
+def differentiate_to_pose(current, desired):
+    # Not a twist, linear velocity and desired exponential coordinates
+    s = np.zeros(6)
+    s[0:3] = desired[0:3, 3] - current[0:3, 3]
+    s[3:6] = SO3(current[0:3, 0:3].T @ desired[0:3, 0:3]).log(twist=True)
+    
     # Above will fail when the rotation matrix is the identity. Resolve manually. 
     if np.isnan(s).any():
         s[0:3] = desired[0:3, 3] - current[0:3, 3]

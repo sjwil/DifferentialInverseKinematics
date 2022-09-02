@@ -1,4 +1,4 @@
-from DifferentialIK import differential_ik, get_desired_twist
+from DifferentialIK import differential_ik
 from UR5e import HTrans, Jacobian
 import numpy as np
 
@@ -58,3 +58,8 @@ def task_one(modes=None, trials=None, epsilon_fn=None, jacobian_fn=None, desired
             full_run_actual_twists += [intermediate_run_actual_twists]
 
     return full_run_joint_positions, iterations, full_run_end_effector_positions, full_run_desired_twists, full_run_actual_twists
+
+def task_two():
+    test_angles = [0, -1.382, -1.13, -2, 1.63, 3.142]
+    # test_angles = [-0.785, -1.382, -1.13, -2, 1.63, 3.142]
+    center_pose = HTrans(test_angles)
